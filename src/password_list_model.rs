@@ -1,4 +1,3 @@
-use vgtk::lib::gtk::*;
 use id_tree::{Tree, Node, NodeId, InsertBehavior};
 use directories::{BaseDirs};
 
@@ -18,7 +17,6 @@ pub struct PasswordListModel {
     pub password_store_path: PathBuf,
     pub history: Vec<String>,
     pub current_password: Option<String>,
-    pub show_main_menu: Option<MenuButton>,
     pub error: Option<String>,
 }
 
@@ -42,7 +40,6 @@ impl Default for PasswordListModel {
             password_store_path,
             history: vec![".".into()],
             current_password: None,
-            show_main_menu: None,
             error: None,
         };
         me.reload_passwords();

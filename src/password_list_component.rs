@@ -32,7 +32,7 @@ impl Component for PasswordListHeaderbar {
 
     fn update(&mut self, message: PasswordListMessage) -> UpdateAction<Self> {
         self.on_message.send(message);
-        UpdateAction::Render
+        UpdateAction::None
     }
 
     fn view(&self) -> VNode<Self> {
@@ -61,7 +61,7 @@ impl Component for PasswordList {
 
     fn update(&mut self, message: PasswordListMessage) -> UpdateAction<Self> {
         self.on_message.send(message);
-        UpdateAction::Render
+        UpdateAction::None
     }
 
     fn view(&self) -> VNode<Self> {

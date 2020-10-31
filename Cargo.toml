@@ -1,0 +1,14 @@
+[package]
+authors = ["Fin Christensen <christensen.fin@gmail.com>"]
+edition = "2018"
+name = "pass-gtk"
+version = "0.1.0"
+[dependencies]
+directories = "3.0.1"
+id_tree = "1.7.0"
+vgtk = "0.3.0"
+pango = "0.9.1"
+
+[dependencies.gtk]
+features = ["purge-lgpl-docs", "v3_16"]
+version = "0.9.2"

@@ -6,6 +6,7 @@ use vgtk::{ext::*, gtk, VNode};
 use vgtk::lib::gtk::*;
 use id_tree::NodeId;
 use pango::EllipsizeMode;
+use std::iter;
 
 impl View for PasswordListHeaderbar {
     fn view(&self) -> VNode<Self> {
@@ -151,7 +152,7 @@ impl View for PasswordList {
                                 Entry::Password(name) => name,
                                 Entry::Directory(name) => name,
                             };
-                            self.view_password_list(root, entry.clone())
+                            self.render_password_list(root, entry.clone())
                         }
 
                         // dummy page for now to show a password
@@ -174,83 +175,109 @@ impl View for PasswordList {
 }
 
 impl PasswordList {
-    fn view_password_list(&self, node: &NodeId, name: String) -> Vec<VNode<Self>> {
-        let child_lists = self.model.passwords.children_ids(node).unwrap().flat_map(|child| {
+    fn render_password_list(&self, node: &NodeId, path: String) -> Vec<VNode<Self>> {
+        let password_list = self.model.passwords.children_ids(node).unwrap().flat_map(|child| {
             if let Entry::Directory(child_name) = self.model.passwords.get(child).unwrap().data() {
-                self.view_password_list(child, format!("{}/{}", name, child_name))
+                self.render_password_list(child, format!("{}/{}", path, child_name))
             } else {
                 vec![]
             }
         });
 
-        std::iter::once(
-            gtk! {
-                <ListBox Stack::name=name.clone()
-                         on row_activated=|_, row| {
-                             let widget_name = row.get_widget_name();
-                             if widget_name == "show_password" {
-                                 PasswordListMessage::ShowPassword(row.get_user_data_path())
-                             } else {
-                                 PasswordListMessage::ShowDirectory(widget_name.into())
-                             }
-                         }>
-                {
-                    self.model.passwords.children_ids(node).unwrap().map(|child| {
-                        let children = self.model.passwords.children_ids(child).unwrap().count();
-                        let child = self.model.passwords.get(child).unwrap().data().clone();
-                        match child {
-                            Entry::Password(child_name) => {
-                                gtk! {
-                                    <ListBoxRow selectable=false
-                                                user_data_path=format!("{}/{}", name, child_name)
-                                                widget_name="show_password">
-                                        <Box orientation=Orientation::Horizontal
-                                             spacing=16
-                                             margin_top=4
-                                             margin_bottom=4
-                                             margin_start=8
-                                             margin_end=8>
-                                            <Image property_icon_name="dialog-password"
-                                                   property_icon_size=3 />
-                                            <Label label=child_name />
-                                        </Box>
-                                    </ListBoxRow>
-                                }
-                            },
-                            Entry::Directory(child_name) => {
-                                gtk! {
-                                    <ListBoxRow selectable=false
-                                                widget_name=format!("{}/{}", name, child_name)>
-                                        <Box orientation=Orientation::Horizontal
-                                             spacing=16
-                                             margin_top=4
-                                             margin_bottom=4
-                                             margin_start=8
-                                             margin_end=8>
-                                            <Image property_icon_name="folder"
-                                                   property_icon_size=3 />
-                                            <Box orientation=Orientation::Vertical spacing=2>
-                                                <Label markup=format!("<b>{}</b>", child_name) xalign=0.0 />
-                                                <Label markup=format!(
-                                                           "<small>{} {}</small>",
-                                                           children,
-                                                           if children == 1 { "Password" } else { "Passwords" }
-                                                       )
-                                                       xalign=0.0
-                                                       classes=vec!["dim-label".into()] />
-                                            </Box>
-                                            <Image property_icon_name="go-next-symbolic"
-                                                   hexpand=true
-                                                   halign=Align::End />
-                                        </Box>
-                                    </ListBoxRow>
-                                }
-                            },
-                        }
-                    })
+        iter::once(gtk! {
+            <ListBox
+                Stack::name=path.clone()
+                on row_activated=|_, row| {
+                    let widget_name = row.get_widget_name();
+                    if widget_name == "show_password" {
+                        PasswordListMessage::ShowPassword(row.get_user_data_path())
+                    } else {
+                        PasswordListMessage::ShowDirectory(widget_name.into())
+                    }
                 }
-                </ListBox>
-            },
-        ).chain(child_lists).collect()
+            >
+            {
+                self.model.passwords.children_ids(node).unwrap().map(|child| {
+                    let children = self.model.passwords.children_ids(child).unwrap().count();
+                    let child = self.model.passwords.get(child).unwrap().data().clone();
+                    match child {
+                        Entry::Password(child_name) => self.render_password_entry(&path, child_name),
+                        Entry::Directory(child_name) => self.render_directory_entry(children, &path, &child_name),
+                    }
+                })
+            }
+            </ListBox>
+        }).chain(password_list).collect()
+    }
+
+    fn render_password_entry(&self, path: &String, child_name: String) -> VNode<Self> {
+        gtk! {
+            <ListBoxRow
+                selectable=false
+                user_data_path=format!("{}/{}", path, child_name)
+                widget_name="show_password"
+            >
+                <Box
+                    orientation=Orientation::Horizontal
+                    spacing=16
+                    margin_top=4
+                    margin_bottom=4
+                    margin_start=8
+                    margin_end=8
+                >
+                    <Image
+                        property_icon_name="dialog-password"
+                        property_icon_size=3
+                    />
+                    <Label label=child_name />
+                </Box>
+            </ListBoxRow>
+        }
+    }
+
+    fn render_directory_entry(&self, children: usize, path: &String, child_name: &String) -> VNode<Self> {
+        gtk! {
+            <ListBoxRow
+                selectable=false
+                widget_name=format!("{}/{}", path, child_name)
+            >
+                <Box
+                    orientation=Orientation::Horizontal
+                    spacing=16
+                    margin_top=4
+                    margin_bottom=4
+                    margin_start=8
+                    margin_end=8
+                >
+                    <Image
+                        property_icon_name="folder"
+                        property_icon_size=3
+                    />
+                    <Box
+                        orientation=Orientation::Vertical
+                        spacing=2
+                    >
+                        <Label
+                            markup=format!("<b>{}</b>", child_name)
+                            xalign=0.0
+                        />
+                        <Label
+                            markup=format!(
+                                "<small>{} {}</small>",
+                                children,
+                                if children == 1 { "Password" } else { "Passwords" }
+                            )
+                            xalign=0.0
+                            classes=vec!["dim-label".into()]
+                        />
+                    </Box>
+                    <Image
+                        property_icon_name="go-next-symbolic"
+                        hexpand=true
+                        halign=Align::End
+                    />
+                </Box>
+            </ListBoxRow>
+        }
     }
 }

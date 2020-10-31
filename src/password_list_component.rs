@@ -1,19 +1,20 @@
 use crate::prelude::*;
-use crate::password_list_model::SharedPasswordListModel;
+use crate::password_list_model::PasswordListModel;
 
-use vgtk::{Component, UpdateAction, VNode};
+use vgtk::{Component, UpdateAction, Callback, VNode};
 
 #[derive(Clone, Debug)]
 pub enum PasswordListMessage {
     Reload,
+    Back,
     ShowDirectory(String),
     ShowPassword(String),
-    Back,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct PasswordListHeaderbar {
-    pub model: SharedPasswordListModel,
+    pub model: PasswordListModel,
+    pub on_message: Callback<PasswordListMessage>,
 }
 
 impl Component for PasswordListHeaderbar {
@@ -30,9 +31,8 @@ impl Component for PasswordListHeaderbar {
     }
 
     fn update(&mut self, message: PasswordListMessage) -> UpdateAction<Self> {
-        match message {
-            _ => UpdateAction::None
-        }
+        self.on_message.send(message);
+        UpdateAction::Render
     }
 
     fn view(&self) -> VNode<Self> {
@@ -42,7 +42,8 @@ impl Component for PasswordListHeaderbar {
 
 #[derive(Clone, Debug, Default)]
 pub struct PasswordList {
-    pub model: SharedPasswordListModel,
+    pub model: PasswordListModel,
+    pub on_message: Callback<PasswordListMessage>,
 }
 
 impl Component for PasswordList {
@@ -59,40 +60,40 @@ impl Component for PasswordList {
     }
 
     fn update(&mut self, message: PasswordListMessage) -> UpdateAction<Self> {
-        match message {
-            PasswordListMessage::Reload => {
-                self.model.reload_passwords();
-                UpdateAction::Render
-            },
-            PasswordListMessage::Back => {
-                if self.model.can_go_back() {
-                    if self.model.current_password.is_some() {
-                        self.model.current_password = None;
-                    } else {
-                        self.model.history.pop();
-                    }
-
-                    UpdateAction::Render
-                } else {
-                    UpdateAction::None
-                }
-            },
-            PasswordListMessage::ShowDirectory(directory_path) => {
-                self.model.history = directory_path
-                    .split("/")
-                    .map(|s| s.to_owned())
-                    .collect();
-                self.model.current_password = None;
-                UpdateAction::Render
-            },
-            PasswordListMessage::ShowPassword(password) => {
-                self.model.current_password = Some(password);
-                UpdateAction::Render
-            },
-        }
+        self.on_message.send(message);
+        UpdateAction::Render
     }
 
     fn view(&self) -> VNode<Self> {
         View::view(self)
+    }
+}
+
+impl PasswordListModel {
+    pub fn update(&mut self, message: PasswordListMessage) {
+        match message {
+            PasswordListMessage::Reload => {
+                self.reload_passwords();
+            },
+            PasswordListMessage::Back => {
+                if self.can_go_back() {
+                    if self.current_password.is_some() {
+                        self.current_password = None;
+                    } else {
+                        self.history.pop();
+                    }
+                }
+            },
+            PasswordListMessage::ShowDirectory(directory_path) => {
+                self.history = directory_path
+                    .split("/")
+                    .map(|s| s.to_owned())
+                    .collect();
+                self.current_password = None;
+            },
+            PasswordListMessage::ShowPassword(password) => {
+                self.current_password = Some(password);
+            },
+        }
     }
 }

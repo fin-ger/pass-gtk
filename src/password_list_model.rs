@@ -5,25 +5,6 @@ use directories::{BaseDirs};
 use std::{io, fs, env};
 use std::path::{Path, PathBuf};
 use std::cmp::Ordering;
-use std::rc::Rc;
-use std::ops::{Deref, DerefMut};
-
-#[derive(Clone, Debug, Default)]
-pub struct SharedPasswordListModel(Rc<PasswordListModel>);
-
-impl Deref for SharedPasswordListModel {
-    type Target = PasswordListModel;
-
-    fn deref(&self) -> &Self::Target {
-        self.0.deref()
-    }
-}
-
-impl DerefMut for SharedPasswordListModel {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        Rc::get_mut(&mut self.0).expect("SharedPasswordListModel was borrowed mutably while it shouldn't!")
-    }
-}
 
 #[derive(Clone, Debug)]
 pub enum Entry {

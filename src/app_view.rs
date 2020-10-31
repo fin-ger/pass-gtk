@@ -27,10 +27,12 @@ impl View for App {
                 >
                     <@PasswordListHeaderbar
                         model=self.password_list_model.clone()
+                        on_message=|msg| AppMessage::PasswordList(msg)
                     />
 
                     <@PasswordList
                         model=self.password_list_model.clone()
+                        on_message=|msg| AppMessage::PasswordList(msg)
                     />
                 </Window>
             </Application>
